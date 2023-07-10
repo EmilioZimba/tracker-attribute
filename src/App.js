@@ -16,8 +16,14 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 import requests from "./requests";
-import TableComponennt from "./TableComponennt";
+import Analitcs2Excel from "./Analitcs2Excel";
 import TableComponentAnalitcsStyle from "./TableComponentAnalitcsStyle";
+/*
+import TableComponennt from "./TableComponennt";
+import DeleteEnrolments from "./DeleteEnrolments";
+*/
+import DownloadIcon from "@mui/icons-material/Download";
+import UploadIcon from "@mui/icons-material/Upload";
 
 let programs = [];
 let orgUnitLevels = [];
@@ -35,13 +41,14 @@ function App() {
   const [selectedOrgUnitLevel, setSelectedOrgUnitLevel] = useState(null);
   const [selectedAttributes, setSelectedAttributes] = useState([]);
   const [loadData, setLoadData] = useState(false);
+  const [downloadXLSX, setdownloadXLSX] = useState(false);
   const [selectedOrganizationUnit, setSelectedOrganizationUnit] =
     useState(null);
 
   async function init() {
     const [requestPrograms, requestOrgUnitLevels] = await Promise.all([
       requests.getPrograms(
-        `?fields=id,displayName,trackedEntityType[id],programTrackedEntityAttributes[id,trackedEntityAttribute[id,displayName]],programStages[id,displayName,programStageDataElements[dataElement[id,displayName]]]&filter=programType:eq:WITH_REGISTRATION&paging=false`
+        `?fields=id,displayName,trackedEntityType[id],programTrackedEntityAttributes[id,trackedEntityAttribute[id,displayName]],programStages[id,displayName,programStageDataElements[dataElement[id,displayName]]]&filter=programType:eq:WITHOUT_REGISTRATION&paging=false`
       ),
       requests.getOrgUnitLevels(),
     ]);
@@ -108,6 +115,7 @@ function App() {
                   onChange={(e, v) => {
                     setSelectedOrganizationUnit(v);
                   }}
+                  multiple
                   disabled={selectedOrgUnitLevel === null}
                   getOptionLabel={(option) => option.displayName}
                   renderInput={(params) => (
@@ -281,23 +289,46 @@ function App() {
                 >
                   Carregar
                 </Button>
+                {/*
+                &nbsp;
+                <Button
+                  style={{ width: "31%", marginTop: "15px" }}
+                  variant="contained"
+                  onClick={() => {
+                    setdownloadXLSX(!downloadXLSX);
+                  }}
+                >
+                  <DownloadIcon /> XLSX
+                </Button>&nbsp;
+                <Button
+                  style={{ width: "31%", marginTop: "15px" }}
+                  variant="contained"
+                  onClick={() => {
+                    setLoadData(!loadData);
+                  }}
+                >
+                  <UploadIcon />
+                  XLSX
+                </Button>*/}
               </Box>
             </Box>
           </Box>
           <Box style={{ maxHeight: "100vh", overflow: "auto" }} flexGrow={1}>
-            <TableComponentAnalitcsStyle
+            <Analitcs2Excel
               dataElement={seletcedDataElement}
               dataElements={selectedDataElements}
-              attribute={selectedAttribute}
-              orgUnit={selectedOrganizationUnit}
+              orgUnits={selectedOrganizationUnit}
               program={selectedProgram}
               programStage={selectedProgramStage}
+              todosAttributos={
+                selectedProgram !== null
+                  ? selectedProgram.programTrackedEntityAttributes
+                  : []
+              }
+              attributes={selectedAttributes}
               startDate={dayjs(startDate).format("YYYY-MM-DD")}
               endDate={dayjs(endDate).format("YYYY-MM-DD")}
-              attributes={selectedAttributes}
-              todosAttributos={
-                selectedProgram.programTrackedEntityAttributes || []
-              }
+              downloadXLSXFile={downloadXLSX}
               refresh={loadData}
             />
           </Box>

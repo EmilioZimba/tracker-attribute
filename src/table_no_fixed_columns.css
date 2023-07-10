@@ -26,17 +26,6 @@ table thead {
     background: white;
 }
 
-th:first-child {
-    position: sticky;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-    background: white;
-    text-align: left;
-    max-width: 28px;
-}
-
-
 
 table td {
     background: #fff;
@@ -51,17 +40,12 @@ table tbody th {
     position: relative;
 }
 
-table thead th:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 2;
-}
 
 table tbody th {
     position: sticky;
     left: 0;
     background: white;
-    z-index: 1;
+    /*z-index: 1;*/
 }
 
 caption {
@@ -73,6 +57,7 @@ caption {
 
 [role="region"][aria-labelledby][tabindex] {
     width: 100%;
-    max-height: calc(100vh - 67px);
+    max-height: calc(100vh - 65px);
+    /*max-height: calc(100vh - 67px);*/
     overflow: auto;
 }

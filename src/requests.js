@@ -1,13 +1,14 @@
 import axios from "axios";
 
+//MUDE CONFORME AS SUAS CREDENCIAIS
 const authetication = btoa("ezimba:H3rminio_91");
 
 export function baseURL() {
   if (process.env.NODE_ENV === "production") {
     //return `${window.location.origin}/${window.location.pathname.toString().split('/')[1]}`;
     return `${window.location.origin}`;
-    //return 'https://dhis2-passos.fhi360.org';
   } else {
+    //MUDE ISTO PARA A SUA INSTANCIA
     return "https://dhis2-passos.fhi360.org";
     //return 'http://localhost:8080';
     //return 'http://localhost:8080/2.34';
@@ -161,6 +162,9 @@ const requests = {
       `${getBaseURL()}me.json?fields=organisationUnits[id,level]&withinUserSearchHierarchy=true&_=${new Date().getTime()}`,
       getRequestHeaders()
     ),
+  getEnrollments: (q = ``) => axios.get(`${getBaseURL()}enrollments${q}`, getRequestHeaders()),
+  deleteEnrollments: (q = ``) => axios.delete(`${getBaseURL()}enrollments${q}`, getRequestHeaders()),
+  getAnalyticsEvents: (q = ``) => axios.get(`${getBaseURL()}29/analytics/events/query/${q}`, getRequestHeaders()),
   getAnalyticsEnrollments: (q = ``) => axios.get(`${getBaseURL()}analytics/enrollments/query/${q}`, getRequestHeaders()),
   getMyOrgUnitsByLevel: (level = 1) =>
     axios.get(

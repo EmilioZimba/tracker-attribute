@@ -1,19 +1,17 @@
 import React, { useEffect, useState } from "react";
 import {
   Fab,
-  Table,
   Box,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
   CircularProgress,
   TextField,
   IconButton,
 } from "@mui/material";
 import requests from "./requests";
 import ViewColumnIcon from "@mui/icons-material/ViewColumn";
-import "./table.css";
+import DownloadIcon from "@mui/icons-material/Download";
+//import "./table.css";
+import "./table_no_fixed_columns.css";
+import Export, { downloadXLSX, uploadExcel } from "./exportTable";
 
 let tableData = [];
 
@@ -27,34 +25,51 @@ export default function TableComponentAnalitcsStyle({
   dataElement,
   dataElements,
   todosAttributos,
-  orgUnit,
+  orgUnits,
   refresh,
+  downloadXLSXFile,
 }) {
   const [headCells, setHeadCells] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   async function loadData() {
     if (
-      program === null &&
-      orgUnit === null &&
-      attributes === null &&
+      program === null ||
+      attributes === null ||
+      todosAttributos.length <= 0 ||
       dataElements.length <= 0
     )
       return;
 
     setIsLoading(true);
-    let headCellsAux = {};
+    let headCellsAux = {
+      pi: { id: "pi", label: "Enrollment", hide: true, index: 0 },
+      ou: { id: "ou", label: "OrgUnit", hide: false, index: 9 },
+      ouname: { id: "ouname", label: "OrgUnitName", hide: false, index: 7 },
+      enrollmentdate: { id: "enrollmentdate", label: "Enrollment date", hide: false, index: 2 },
+      incidentdate: { id: "incidentdate", label: "Incident date", hide: false, index: 3 },
+      tei: {
+        id: "tei",
+        label: "Tracked entity instance",
+        hide: true,
+        index: 1,
+      },
+    };
 
     todosAttributos.forEach((at) => {
       headCellsAux[`pa_${at.trackedEntityAttribute.id}`] = {
         id: `pa_${at.trackedEntityAttribute.id}`,
         label: at.trackedEntityAttribute.displayName,
+        hide: !attributes
+          .map((atributo) => atributo.trackedEntityAttribute.id)
+          .includes(at.trackedEntityAttribute.id),
       };
     });
     dataElements.forEach((de) => {
       headCellsAux[`de_${de.dataElement.id}`] = {
         id: `de_${de.dataElement.id}`,
         label: de.dataElement.displayName,
+        hide: false,
       };
     });
 
@@ -64,11 +79,11 @@ export default function TableComponentAnalitcsStyle({
 
     const [requestAnalitcsEvents] = await Promise.all([
       requests.getAnalyticsEnrollments(
-        `${program.id}.json?dimension=ou:${
-          orgUnit.id
-        }&startDate=${startDate}&endDate=${endDate}&stage=${
+        `${program.id}.json?dimension=ou:${orgUnits
+          .map((x) => x.id)
+          .join(";")}&startDate=${startDate}&endDate=${endDate}&stage=${
           programStage.id
-        }&outputType=ENROLLMENT&${dataElements
+        }&outputType=EVENT&${dataElements
           .map((de) => `dimension=${programStage.id}.${de.dataElement.id}`)
           .join("&")}&paging=false&_=${new Date().getTime()}&${todosAttributos
           .map(
@@ -112,6 +127,21 @@ export default function TableComponentAnalitcsStyle({
     loadData();
   }, [refresh]);
 
+  /*
+  useEffect(() => {
+    if (
+      program === null ||
+      orgUnit === null ||
+      attributes === null ||
+      todosAttributos.length <= 0 ||
+      dataElements.length <= 0
+    )
+      return;
+    downloadXLSX(program.displayName, headCells, tableData);
+  }, [downloadXLSXFile]);
+
+  */
+
   if (isLoading)
     return (
       <Box style={{ paddingTop: "200px", textAlign: "center" }}>
@@ -121,6 +151,21 @@ export default function TableComponentAnalitcsStyle({
 
   return (
     <>
+      <Fab
+        onClick={() => {
+          downloadXLSX(
+            program.displayName +
+              "__" +
+              programStage.displayName,
+            headCells,
+            tableData
+          );
+        }}
+        style={{ position: "fixed", bottom: "20px", right: "20px" }}
+        color="primary"
+      >
+        <DownloadIcon />
+      </Fab>
       <Box style={{ width: "100%" }} display={"flex"}>
         <Box style={{ paddingTop: "20px" }}>
           {program !== null ? program.displayName : ""} &nbsp;&nbsp;
@@ -136,30 +181,36 @@ export default function TableComponentAnalitcsStyle({
           &nbsp;
         </Box>
         <Box style={{ paddingTop: "10px" }}>
-          <IconButton size="small">
-            <ViewColumnIcon />
-          </IconButton>
+          {/* <Export
+            fileName={program.displayName}
+            tableData={tableData}
+            colls={headCells}
+          /> */}
         </Box>
       </Box>
       <div role="region" aria-labelledby="caption" tabindex="0">
         <table>
           <thead>
             <tr>
-              {headCells.map((hc) => (
-                <th key={hc.id}>{hc.label}</th>
-              ))}
+              {headCells
+                .filter((x) => !x.hide)
+                .map((hc) => (
+                  <th key={hc.id}>{hc.label}</th>
+                ))}
             </tr>
           </thead>
           <tbody>
             {tableData.map((row, rowIndex) => (
               <tr key={rowIndex}>
-                {headCells.map((th, index) =>
-                  index === 0 ? (
-                    <th key={index}>{row[th.id]}</th>
-                  ) : (
-                    <td key={index}>{row[th.id]}</td>
-                  )
-                )}
+                {headCells
+                  .filter((x) => !x.hide)
+                  .map((th, index) =>
+                    index === 0 ? (
+                      <th key={index}>{row[th.id]}</th>
+                    ) : (
+                      <td key={index}>{row[th.id]}</td>
+                    )
+                  )}
               </tr>
             ))}
           </tbody>
