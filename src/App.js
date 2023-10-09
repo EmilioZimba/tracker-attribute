@@ -4,164 +4,193 @@ import {
   TextField,
   Autocomplete,
   Button,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Checkbox,
+  IconButton,
+  DialogContentText,
+  ButtonGroup,
+  Typography,
 } from "@mui/material";
-import { DemoContainer } from "@mui/x-date-pickers/internals/demo";
+import { ChevronLeft, ChevronRight } from "@mui/icons-material";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 import requests from "./requests";
-import Analitcs2Excel from "./Analitcs2Excel";
-import TableComponentAnalitcsStyle from "./TableComponentAnalitcsStyle";
-/*
-import TableComponennt from "./TableComponennt";
-import DeleteEnrolments from "./DeleteEnrolments";
-*/
-import DownloadIcon from "@mui/icons-material/Download";
-import UploadIcon from "@mui/icons-material/Upload";
+import { generateWeeks } from "./utils";
+import VBG from "./vbg/VBG";
+import ATHIV from "./athiv/ATHIV";
+import OrgUnitTree from "./components/OrgUnitTree";
+import { Refresh, PivotTableChart, Download } from "@mui/icons-material";
 
 let programs = [];
-let orgUnitLevels = [];
-let orgUnits = [];
 
 function App() {
   const [updateDOM, setUpdateDOM] = useState(false);
+  const [generatePivot, setGeneratePivot] = useState(0);
+  const [downloadData, setDownloadData] = useState(0);
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [selectedProgram, setSelectedProgram] = useState(null);
-  const [selectedProgramStage, setSelectedProgramStage] = useState(null);
   const [seletcedDataElement, setSeletcedDataElement] = useState(null);
-  const [selectedDataElements, setSelectedDataElements] = useState([]);
-  const [selectedAttribute, setSelectedAttribute] = useState(null);
-  const [selectedOrgUnitLevel, setSelectedOrgUnitLevel] = useState(null);
+  const [showSideBar, setShowSideBar] = useState(true);
   const [selectedAttributes, setSelectedAttributes] = useState([]);
   const [loadData, setLoadData] = useState(false);
-  const [downloadXLSX, setdownloadXLSX] = useState(false);
-  const [selectedOrganizationUnit, setSelectedOrganizationUnit] =
-    useState(null);
+
+  const singleSelect = true;
+  const [orgUnitID, setOrgUnitID] = useState([]);
+  const [level, setLevel] = useState("");
+  const [ouRoots, setOuRoots] = useState([]);
 
   async function init() {
-    const [requestPrograms, requestOrgUnitLevels] = await Promise.all([
+    const [requestPrograms] = await Promise.all([
       requests.getPrograms(
-        `?fields=id,displayName,trackedEntityType[id],programTrackedEntityAttributes[id,trackedEntityAttribute[id,displayName]],programStages[id,displayName,programStageDataElements[dataElement[id,displayName]]]&filter=programType:eq:WITHOUT_REGISTRATION&paging=false`
+        `?fields=id,displayName,trackedEntityType[id],programIndicators[id,name],programTrackedEntityAttributes[id,trackedEntityAttribute[id,displayName]],programStages[id,displayName,programStageDataElements[sortOrder,dataElement[id,displayName,formName]]]&filter=id:in:[jCBlAOhHc1f,LKIneB0oGJa]&paging=false`
       ),
-      requests.getOrgUnitLevels(),
     ]);
     programs = requestPrograms.data.programs;
-    orgUnitLevels = requestOrgUnitLevels.data.organisationUnitLevels;
     setUpdateDOM(!updateDOM);
   }
 
-  async function getOrgUnits() {
-    if (selectedOrgUnitLevel === null) return;
-    const requestOrgUnits = await Promise.resolve(
-      requests.getMyOrgUnitsByLevel(selectedOrgUnitLevel.level)
-    );
-    orgUnits = requestOrgUnits.data.organisationUnits;
-    setUpdateDOM(!updateDOM);
+  function handleCheckOrgUnitID(chkd, targetNode) {
+    if (singleSelect) {
+      setOrgUnitID([targetNode.value]);
+    } else {
+      setOrgUnitID(chkd);
+    }
   }
 
   useEffect(() => {
     init();
   }, []);
 
-  useEffect(() => {
-    getOrgUnits();
-  }, [selectedOrgUnitLevel]);
+  function renderDataTable() {
+    if (selectedProgram === null) {
+      return (
+        <Box style={{ paddingTop: "200px", textAlign: "center" }}>
+          <DialogContentText>
+            Seleccione os campos para processar!
+          </DialogContentText>
+        </Box>
+      );
+    } else {
+      if (selectedProgram.id === "jCBlAOhHc1f") {
+        return (
+          <VBG
+            dataElement={seletcedDataElement}
+            generatePivot={generatePivot}
+            downloadData={downloadData}
+            dataElements={
+              selectedProgram != null
+                ? selectedProgram.programStages[0].programStageDataElements.map(
+                    (pde) => ({
+                      ...pde.dataElement,
+                      sortOrder: pde.sortOrder,
+                    })
+                  )
+                : []
+            }
+            orgUnits={[{ id: orgUnitID }]}
+            programIndicators={
+              selectedProgram != null ? selectedProgram.programIndicators : []
+            }
+            program={selectedProgram}
+            programStage={
+              selectedProgram != null ? selectedProgram.programStages[0] : {}
+            }
+            todosAttributos={
+              selectedProgram !== null
+                ? selectedProgram.programTrackedEntityAttributes
+                : []
+            }
+            attributes={selectedAttributes}
+            startDate={dayjs(startDate).format("YYYY-MM-DD")}
+            endDate={dayjs(endDate).format("YYYY-MM-DD")}
+            refresh={loadData}
+          />
+        );
+      }
+      if (selectedProgram.id === "LKIneB0oGJa") {
+        return (
+          <ATHIV
+            dataElement={seletcedDataElement}
+            generatePivot={generatePivot}
+            downloadData={downloadData}
+            dataElements={
+              selectedProgram != null
+                ? selectedProgram.programStages[0].programStageDataElements.map(
+                    (pde) => ({
+                      ...pde.dataElement,
+                      sortOrder: pde.sortOrder,
+                    })
+                  )
+                : []
+            }
+            orgUnits={[{ id: orgUnitID }]}
+            programIndicators={
+              selectedProgram != null ? selectedProgram.programIndicators : []
+            }
+            program={selectedProgram}
+            programStage={
+              selectedProgram != null ? selectedProgram.programStages[0] : {}
+            }
+            todosAttributos={
+              selectedProgram !== null
+                ? selectedProgram.programTrackedEntityAttributes
+                : []
+            }
+            attributes={selectedAttributes}
+            startDate={dayjs(startDate).format("YYYY-MM-DD")}
+            endDate={dayjs(endDate).format("YYYY-MM-DD")}
+            refresh={loadData}
+          />
+        );
+      }
+    }
+  }
 
   return (
     <>
       <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <IconButton
+          color="secondary"
+          style={{
+            position: "fixed",
+            transition: "all .3s",
+            marginLeft: showSideBar ? "295px" : "0px",
+            bottom: "14px",
+            zIndex: 100,
+          }}
+          onClick={() => setShowSideBar(!showSideBar)}
+        >
+          {showSideBar ? <ChevronLeft /> : <ChevronRight />}
+        </IconButton>
         <Box display={"flex"}>
-          <Box style={{ maxWidth: "350px", minWidth: "350px" }}>
+          <Box
+            style={{
+              marginLeft: !showSideBar ? "-300px" : "0px",
+              minWidth: "300px",
+              width: "300px",
+              transition: "all .3s",
+              borderRight: "1px solid #eee",
+            }}
+          >
             <Box
               style={{
+                display: "flex",
+                alignItems: "flex-start",
+                padding: "5px",
                 flexDirection: "column",
-                justifyContent: "center",
-                padding: "10px",
+                height: "calc(100vh - 150px)",
+                minHeight: "calc(100vh - 40px)",
+                maxHeight: "calc(100vh - 40px)",
               }}
-              display={"flex"}
             >
-              <Box
-                style={{
-                  maxHeight: "calc(100vh - 74px)",
-                  minHeight: "calc(100vh - 74px)",
-                  overflow: "auto",
-                }}
-              >
-                <Autocomplete
-                  options={orgUnitLevels}
-                  onChange={(e, v) => {
-                    setSelectedOrgUnitLevel(v);
-                  }}
-                  getOptionLabel={(option) => option.displayName}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      margin="dense"
-                      size="small"
-                      variant="outlined"
-                      label="Nivel da unidade organizacional"
-                    />
-                  )}
-                />
-                <Autocomplete
-                  options={orgUnits}
-                  onChange={(e, v) => {
-                    setSelectedOrganizationUnit(v);
-                  }}
-                  multiple
-                  disabled={selectedOrgUnitLevel === null}
-                  getOptionLabel={(option) => option.displayName}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      margin="dense"
-                      size="small"
-                      variant="outlined"
-                      label="Unidade organizacional"
-                    />
-                  )}
-                />
-
-                <DemoContainer components={["DatePicker"]}>
-                  <DatePicker
-                    onChange={(newValue) => setStartDate(dayjs(newValue))}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        margin: "dense",
-                        size: "small",
-                      },
-                    }}
-                    value={dayjs(startDate)}
-                    label="Inicio"
-                  />
-                </DemoContainer>
-                <DemoContainer components={["DatePicker"]}>
-                  <DatePicker
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        margin: "dense",
-                        size: "small",
-                      },
-                    }}
-                    onChange={(newValue) => setEndDate(dayjs(newValue))}
-                    value={dayjs(endDate)}
-                    label="Termino"
-                  />
-                </DemoContainer>
-
+              <Box flexGrow={1}>
                 <Autocomplete
                   options={programs}
+                  //style={{ width: "380px" }}
                   onChange={(e, v) => {
                     setSelectedProgram(v);
+                    setGeneratePivot(0);
+                    setDownloadData(0);
                   }}
                   getOptionLabel={(option) => option.displayName}
                   renderInput={(params) => (
@@ -174,163 +203,110 @@ function App() {
                     />
                   )}
                 />
-
                 <Autocomplete
-                  options={
-                    selectedProgram !== null
-                      ? selectedProgram.programStages
-                      : []
-                  }
+                  options={[
+                    "Semanal",
+                    "Mensal",
+                    "Trimestral",
+                    "Semestral",
+                    "Anual",
+                  ]}
                   onChange={(e, v) => {
-                    setSelectedProgramStage(v);
+                    //setSelectedProgram(v);
                   }}
-                  disabled={selectedProgram === null}
-                  getOptionLabel={(option) => option.displayName}
+                  //getOptionLabel={(option) => option.displayName}
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       margin="dense"
                       size="small"
                       variant="outlined"
-                      label="Estagio"
+                      label="Tipo de periodo"
                     />
                   )}
                 />
-
                 <Autocomplete
-                  options={
-                    selectedProgram !== null
-                      ? selectedProgram.programTrackedEntityAttributes
-                      : []
-                  }
+                  options={generateWeeks("2023-01-02", "2023-12-31", 16)}
                   onChange={(e, v) => {
-                    setSelectedAttributes(v);
+                    setStartDate(v[0].startDate);
+                    setEndDate(v[0].endDate);
                   }}
-                  multiple
-                  disabled={selectedProgram === null}
-                  getOptionLabel={(option) =>
-                    option.trackedEntityAttribute.displayName
-                  }
+                  getOptionLabel={(opt) => {
+                    return `WK${opt[0].weekNumber} ${dayjs(
+                      opt[0].startDate
+                    ).format("DDMM")}-${dayjs(opt[0].endDate).format("DDMM")}`;
+                  }}
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       margin="dense"
                       size="small"
                       variant="outlined"
-                      label="Attributos da Entidade Rastreada"
+                      label="Periodo"
                     />
                   )}
                 />
 
-                <Autocomplete
-                  options={
-                    selectedProgramStage !== null
-                      ? selectedProgramStage.programStageDataElements
-                      : []
-                  }
-                  onChange={(e, v) => {
-                    setSelectedDataElements(v);
-                    //console.log(v);
-                  }}
-                  multiple
-                  value={selectedDataElements}
-                  name="dataElements"
-                  id="dataElements"
-                  disabled={selectedProgram === null}
-                  getOptionLabel={(option) => option.dataElement.displayName}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      margin="dense"
-                      size="small"
-                      variant="outlined"
-                      label="Elementos de Dado"
-                    />
-                  )}
+                <Box style={{ textAlign: "center" }}>
+                  <Typography variant="button">
+                    Seleccione a unidade organizacional
+                  </Typography>
+                </Box>
+                <OrgUnitTree
+                  orgUnitLevel={level}
+                  orgUnitLevels={level}
+                  loadTableData={() => {}}
+                  setOURoots={(ouroots) => setOuRoots(ouroots)}
+                  handleCheck={handleCheckOrgUnitID}
+                  orgUnitIDs={orgUnitID}
                 />
-
-                {/*
-                <List>
-                  <ListItem disablePadding>
-                    <ListItemText primary="Seleccione as colunas" />
-                  </ListItem>
-                  {selectedProgram === null
-                    ? []
-                    : selectedProgram.programTrackedEntityAttributes.map(
-                        (tea, index) => (
-                          <ListItem disablePadding key={index}>
-                            <ListItemIcon>
-                              <Checkbox
-                                edge="start"
-                                //checked={checked.indexOf(value) !== -1}
-                                value={tea}
-                                //onChange={() => {}}
-                                tabIndex={-1}
-                                disableRipple
-                                //inputProps={{ 'aria-labelledby': labelId }}
-                              />
-                            </ListItemIcon>
-                            <ListItemText>
-                              {tea.trackedEntityAttribute.displayName}
-                            </ListItemText>
-                          </ListItem>
-                        )
-                      )}
-                </List>
-                */}
               </Box>
-              <Box>
-                <Button
-                  style={{ width: "100%", marginTop: "15px" }}
+
+              <Box style={{ textAlign: "center", width: "100%" }}>
+                <ButtonGroup
                   variant="contained"
-                  onClick={() => {
-                    setLoadData(!loadData);
-                  }}
+                  aria-label="outlined primary button group"
                 >
-                  Carregar
-                </Button>
-                {/*
-                &nbsp;
-                <Button
-                  style={{ width: "31%", marginTop: "15px" }}
-                  variant="contained"
-                  onClick={() => {
-                    setdownloadXLSX(!downloadXLSX);
-                  }}
-                >
-                  <DownloadIcon /> XLSX
-                </Button>&nbsp;
-                <Button
-                  style={{ width: "31%", marginTop: "15px" }}
-                  variant="contained"
-                  onClick={() => {
-                    setLoadData(!loadData);
-                  }}
-                >
-                  <UploadIcon />
-                  XLSX
-                </Button>*/}
+                  <Button
+                    onClick={() => {
+                      setLoadData(!loadData);
+                    }}
+                  >
+                    <Refresh />
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setGeneratePivot((current) => current + 1);
+                    }}
+                  >
+                    Pivot &nbsp;
+                    <PivotTableChart />
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setDownloadData((current) => current + 1);
+                    }}
+                  >
+                    <Download />
+                  </Button>
+                </ButtonGroup>
               </Box>
             </Box>
           </Box>
-          <Box style={{ maxHeight: "100vh", overflow: "auto" }} flexGrow={1}>
-            <Analitcs2Excel
-              dataElement={seletcedDataElement}
-              dataElements={selectedDataElements}
-              orgUnits={selectedOrganizationUnit}
-              program={selectedProgram}
-              programStage={selectedProgramStage}
-              todosAttributos={
-                selectedProgram !== null
-                  ? selectedProgram.programTrackedEntityAttributes
-                  : []
-              }
-              attributes={selectedAttributes}
-              startDate={dayjs(startDate).format("YYYY-MM-DD")}
-              endDate={dayjs(endDate).format("YYYY-MM-DD")}
-              downloadXLSXFile={downloadXLSX}
-              refresh={loadData}
-            />
+          <Box
+            style={{
+              transition: "all .3s",
+              padding: 0,
+              margin: 0,
+              overflow: "auto",
+              height: "100vh",
+              boxShadow: "none",
+            }}
+            flexGrow={1}
+          >
+            <Box style={{ height: "100vh", overflow: "auto" }} flexGrow={1}>
+              {renderDataTable()}
+            </Box>
           </Box>
         </Box>
       </LocalizationProvider>

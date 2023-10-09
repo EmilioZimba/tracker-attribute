@@ -49,14 +49,27 @@ const requests = {
   getTrackedEntityInstances: (q = ".json") =>
     axios.get(`${getBaseURL()}trackedEntityInstances${q}`, getRequestHeaders()),
 
+  getOrgUnitCostumRequest: (q) =>
+    axios.get(`${getBaseURL()}organisationUnits.json${q}`, getRequestHeaders()),
+
   getOrgUnits: () =>
     axios.get(
-      `${getBaseURL()}organisationUnits.json?fields=id,displayName,parent[displayName,parent[displayName]],level&paging=false&_=${new Date().getTime()}`,
+      `${getBaseURL()}organisationUnits.json?fields=id,code,lastUpdated,created,displayName,parent[displayName,parent[displayName]],level&paging=false&_=${new Date().getTime()}`,
+      getRequestHeaders()
+    ),
+  getOrgUnitsByID: (orgUnitID) =>
+    axios.get(
+      `${getBaseURL()}/organisationUnits/${orgUnitID}.json?fields=*,organisationUnitGroups[id,displayName],parent[id,name,level]&paging=false`,
       getRequestHeaders()
     ),
   getOrgUnitLevels: () =>
     axios.get(
       `${getBaseURL()}organisationUnitLevels.json?fields=id,displayName,level&paging=false&_=${new Date().getTime()}&order=level:asc`,
+      getRequestHeaders()
+    ),
+  getOrganisationUnitLevels: (level) =>
+    axios.get(
+      `${getBaseURL()}/organisationUnitLevels.json?fields=id,level~rename(nivel),displayName~rename(nome)&filter=level:gt:${level}&paging=false&_=${new Date().getTime()}`,
       getRequestHeaders()
     ),
   getDataElementGroups: () =>
@@ -162,10 +175,20 @@ const requests = {
       `${getBaseURL()}me.json?fields=organisationUnits[id,level]&withinUserSearchHierarchy=true&_=${new Date().getTime()}`,
       getRequestHeaders()
     ),
-  getEnrollments: (q = ``) => axios.get(`${getBaseURL()}enrollments${q}`, getRequestHeaders()),
-  deleteEnrollments: (q = ``) => axios.delete(`${getBaseURL()}enrollments${q}`, getRequestHeaders()),
-  getAnalyticsEvents: (q = ``) => axios.get(`${getBaseURL()}29/analytics/events/query/${q}`, getRequestHeaders()),
-  getAnalyticsEnrollments: (q = ``) => axios.get(`${getBaseURL()}analytics/enrollments/query/${q}`, getRequestHeaders()),
+  getEnrollments: (q = ``) =>
+    axios.get(`${getBaseURL()}enrollments${q}`, getRequestHeaders()),
+  deleteEnrollments: (q = ``) =>
+    axios.delete(`${getBaseURL()}enrollments${q}`, getRequestHeaders()),
+  getAnalyticsEvents: (q = ``) =>
+    axios.get(
+      `${getBaseURL()}29/analytics/events/query/${q}`,
+      getRequestHeaders()
+    ),
+  getAnalyticsEnrollments: (q = ``) =>
+    axios.get(
+      `${getBaseURL()}analytics/enrollments/query/${q}`,
+      getRequestHeaders()
+    ),
   getMyOrgUnitsByLevel: (level = 1) =>
     axios.get(
       `${getBaseURL()}organisationUnits.json?fields=id,displayName,parent[displayName]&filter=level:eq:${level}&paging=false&withinUserSearchHierarchy=true&_=${new Date().getTime()}`,

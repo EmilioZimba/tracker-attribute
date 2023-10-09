@@ -24,7 +24,7 @@ export default function DeleteEnrolments({
   startDate,
   endDate,
   program,
-  orgUnit,
+  orgUnits,
   refresh,
   downloadXLSXFile,
 }) {
@@ -48,9 +48,10 @@ export default function DeleteEnrolments({
   async function loadData() {
     setIsLoading(true);
     setSelectedEnrolments([]);
+    console.log()
     const requestEnolments = await Promise.resolve(
       requests.getEnrollments(
-        `.json?ou=${orgUnit.id}&program=${program.id}&paging=false`
+        `.json?ou=${orgUnits.id}&program=${program.id}&paging=false`
       )
     );
 

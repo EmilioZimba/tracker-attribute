@@ -4,16 +4,27 @@ import {
   Box,
   CircularProgress,
   TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  DialogContentText,
   IconButton,
+  Button,
+  Checkbox,
   Toolbar,
   Typography,
   MenuItem,
+  Snackbar,
 } from "@mui/material";
 import requests from "./requests";
 import ViewColumnIcon from "@mui/icons-material/ViewColumn";
+
+import CloseIcon from "@mui/icons-material/Close";
 import DownloadIcon from "@mui/icons-material/Download";
 import "./table_no_fixed_columns.css";
-import Export, { downloadXLSX, uploadExcel } from "./exportTable";
+import Export, { downloadXLSX, uploadExcel } from "./components/exportTable";
+import PivotTableChartIcon from "@mui/icons-material/PivotTableChart";
 import {
   KeyboardArrowLeft,
   KeyboardArrowRight,
@@ -21,8 +32,9 @@ import {
   FirstPage,
 } from "@mui/icons-material";
 
-let tableData = [];
 
+
+/*
 function requestEvents(
   program,
   orgUnits,
@@ -46,6 +58,8 @@ function requestEvents(
   );
 }
 
+*/
+
 export default function Analitcs2Excel({
   startDate,
   endDate,
@@ -59,113 +73,21 @@ export default function Analitcs2Excel({
 }) {
   const [headCells, setHeadCells] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  const [noDataToLoad, setNoDataToLoad] = useState(true);
   const [pageCount, setPageCount] = useState(0);
   const [pageSize, setPageSize] = useState(500);
   const [pageNumber, setPageNumber] = useState(1);
+  const [selectedEnrolments, setSelectedEnrolments] = useState([]);
+  const [open, setOpen] = React.useState(false);
+  const [showPivot, setShowPivot] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
 
-  async function loadData() {
-    if (program === null || dataElements.length <= 0) return;
-
-    setIsLoading(true);
-    let headCellsAux = {
-      pi: { id: "eventdate", label: "EventDate", hide: true, index: 2 },
-      ouname: { id: "ouname", label: "OrgUnitName", hide: false, index: 6 },
-    };
-
-    dataElements.forEach((de) => {
-      headCellsAux[`de_${de.dataElement.id}`] = {
-        id: `de_${de.dataElement.id}`,
-        label: de.dataElement.displayName,
-        hide: false,
-      };
-    });
-
-    //outputType = EVENT | ENROLLMENT | TRACKED_ENTITY_INSTANCE
-
-    const [requestAnalitcsEvents] = await Promise.all([
-      requests.getAnalyticsEvents(
-        `${program.id}.json?dimension=ou:${orgUnits
-          .map((x) => x.id)
-          .join(";")}&startDate=${startDate}&endDate=${endDate}&stage=${
-          programStage.id
-        }&outputType=EVENT&${dataElements
-          .map((de) => `dimension=${programStage.id}.${de.dataElement.id}`)
-          .join(
-            "&"
-          )}&pageSize=${pageSize}&page=${pageNumber}&_=${new Date().getTime()}&_=${new Date().getTime()}`
-      ),
-    ]);
-
-    setPageCount(requestAnalitcsEvents.data.metaData.pager.pageCount);
-
-    tableData = [];
-
-    requestAnalitcsEvents.data.headers.forEach((h, index) => {
-      if (headCellsAux[`de_${h.name}`] !== undefined) {
-        headCellsAux[`de_${h.name}`].index = index;
-      }
-
-      if (headCellsAux[`pa_${h.name}`] !== undefined) {
-        headCellsAux[`pa_${h.name}`].index = index;
-      }
-    });
-
-    setHeadCells(Object.values(headCellsAux));
-
-    requestAnalitcsEvents.data.rows.forEach((h, index) => {
-      let row = {};
-      headCells.forEach((hc, j) => {
-        row[hc.id] = h[hc.index];
-      });
-      tableData.push(row);
-    });
-
-    /*
-
-    const requestedEvents = await Promise.all(
-      Array.from(Array(Number.parseInt(pageCount)).keys()).map((p) =>
-        requestEvents(
-          program,
-          orgUnits,
-          startDate,
-          endDate,
-          programStage,
-          dataElements,
-          pageSize,
-          p + 1
-        )
-      )
-    );
-
-    requestedEvents.forEach((r, i) => {
-      let tableExcel = [];
-      r.data.rows.forEach((h, index) => {
-        let row = {};
-        headCells.forEach((hc, j) => {
-          row[hc.id] = h[hc.index];
-        });
-        tableExcel.push(row);
-      });
-
-      downloadXLSX(`ATHIV_Q2__ ${i} of ${pageCount}`, headCells, tableExcel);
-    });
-
-    */
-
-    setIsLoading(false);
-  }
-
+  
   function transferirEventos() {}
-
-  useEffect(() => {
-    loadData();
-  }, [refresh, pageNumber, pageSize]);
-
   useEffect(() => {
     if (program === null || orgUnit === null || dataElements.length <= 0)
       return;
-      /*
+    /*
     downloadXLSX(
       program.displayName + "__" + pageNumber + " of " + pageCount,
       headCells,
@@ -173,6 +95,59 @@ export default function Analitcs2Excel({
     );
     */
   }, [downloadXLSXFile]);
+
+  const handleClose = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+
+    setOpen(false);
+  };
+
+  async function handleDeleteSelectedEnrolments() {
+    setOpen(false);
+    try {
+      setIsLoading(true);
+      await Promise.all(selectedEnrolments.map((x) => requests.deleteEvent(x)));
+      loadData();
+      setSnackbarMessage("Event Deleted.");
+      setOpen(true);
+      setSelectedEnrolments([]);
+    } catch (error) {
+      setSnackbarMessage("Ocorreu um erro!");
+      setOpen(true);
+    }
+    setIsLoading(false);
+  }
+
+  const action = (
+    <React.Fragment>
+      <Button
+        color="secondary"
+        size="small"
+        onClick={handleDeleteSelectedEnrolments}
+      >
+        Confirmar
+      </Button>
+      <IconButton
+        size="small"
+        aria-label="close"
+        color="inherit"
+        onClick={handleClose}
+      >
+        <CloseIcon fontSize="small" />
+      </IconButton>
+    </React.Fragment>
+  );
+
+  if (noDataToLoad)
+    return (
+      <Box style={{ paddingTop: "200px", textAlign: "center" }}>
+        <DialogContentText>
+          Seleccione os campos para processar!
+        </DialogContentText>
+      </Box>
+    );
 
   if (isLoading)
     return (
@@ -183,19 +158,23 @@ export default function Analitcs2Excel({
 
   return (
     <>
+      
       <Fab
         onClick={() => {
-          downloadXLSX(
-            'PASSOS '+program.displayName + "__" + pageNumber + " of " + pageCount,
-            headCells,
-            tableData
-          );
+          setShowPivot(true);
         }}
-        style={{ position: "fixed", bottom: "20px", right: "20px" }}
-        color="primary"
+        style={{ position: "fixed", bottom: "20px", right: "81px" }}
+        color="secundary"
       >
-        <DownloadIcon />
+        <PivotTableChartIcon />
       </Fab>
+      <Snackbar
+        open={open}
+        autoHideDuration={6000}
+        onClose={handleClose}
+        message={snackbarMessage}
+        action={action}
+      />
       <div role="region" aria-labelledby="caption" tabindex="0">
         <table>
           <thead>
@@ -208,19 +187,26 @@ export default function Analitcs2Excel({
             </tr>
           </thead>
           <tbody>
-            {tableData.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {headCells
-                  .filter((x) => !x.hide)
-                  .map((th, index) =>
-                    index === 0 ? (
-                      <th key={index}>{row[th.id]}</th>
-                    ) : (
-                      <td key={index}>{row[th.id]}</td>
-                    )
-                  )}
-              </tr>
-            ))}
+            {tableData
+              //.filter((rw) => validateDataValueSet(rw).length > 0)
+              .map((row, rowIndex) => (
+                <tr
+                  style={{
+                    color:
+                      validateDataValueSet(row).length > 0 ? "red" : "black",
+                  }}
+                  key={rowIndex}
+                >
+                  {headCells
+                    .filter((x) => !x.hide)
+                    .map((th, index) => (
+                      <td key={index}>
+                        {Boolean(th.render) ? th.render(row) : row[th.id]}
+                        {/*row[th.id]*/}
+                      </td>
+                    ))}
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>
@@ -286,6 +272,8 @@ export default function Analitcs2Excel({
           <LastPage />
         </IconButton>
       </Toolbar>
+
+      
     </>
   );
 }

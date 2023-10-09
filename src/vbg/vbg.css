@@ -63,7 +63,7 @@ caption {
 
 [role="region"][aria-labelledby][tabindex] {
     width: 100%;
-    max-height: calc(100vh - 130px);
+    max-height: calc(100vh - 65px);
     /*max-height: calc(100vh - 67px);*/
     overflow: auto;
 }
